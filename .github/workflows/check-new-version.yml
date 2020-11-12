@@ -1,0 +1,30 @@
+name: Check for new initrd
+on:
+    schedule:
+        - cron: "0 2 * * *"
+
+jobs:
+    buster-check-new-initrd:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - name: Download current initrd
+              run: curl http://ftp.debian.org/debian/dists/buster/main/installer-amd64/current/images/netboot/debian-installer/amd64/initrd.gz --output nitrd.gz
+            - name: Compare initrd
+              run: |
+                sha256sum --status -c debian/buster/amd64
+                echo "$?"
+            - uses: nickderobertis/check-if-issue-exists-action@master
+              name: Check if Issue exists
+              id: check_if_issue_exists
+              if: ${{ failure() }}
+              with:
+                repo: stoxygen/custom-boot-realtek
+                token: ${{ secrets.GITHUB_TOKEN }}
+                title: [BUSTER] initrd updated
+            - name: Create Issue
+              if: steps.check_if_issue_exists.output.exists == 'false'
+              uses: JasonEtco/create-an-issue@master
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                DISTRIBUTION: BUSTER
