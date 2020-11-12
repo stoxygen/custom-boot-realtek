@@ -6,7 +6,7 @@ on:
         branches: [master]
 
 jobs:
-    build:
+    build-amd64-buster:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
@@ -21,7 +21,7 @@ jobs:
             - name: Build
               run: |
                 cd /tmp
-                pax -x sv4cpio firmware | gzip -c >firmware.cpio.gz
+                pax -x sv4cpio -w firmware | gzip -c >firmware.cpio.gz
                 cp -p initrd.gz initrd.gz.orig
                 cat initrd.gz.orig /tmp/firmware.cpio.gz > initrd.gz
             
