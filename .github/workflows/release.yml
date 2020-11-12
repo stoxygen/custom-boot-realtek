@@ -1,0 +1,49 @@
+name: Release
+
+on:
+    push:
+        tags:
+        - 'v*'
+
+jobs:
+    build-amd64-buster:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Install dependencies
+              run: sudo apt-get install -qq -y pax curl ca-certificates
+            - name: Prepare build
+              run: |
+                mkdir /tmp/firmware
+                curl http://ftp.debian.org/debian/dists/buster/main/installer-amd64/current/images/netboot/debian-installer/amd64/initrd.gz --output /tmp/initrd.gz
+                curl http://ftp.debian.org/debian/dists/buster/main/installer-amd64/current/images/netboot/debian-installer/amd64/linux --output /tmp/linux
+                curl http://ftp.de.debian.org/debian/pool/non-free/f/firmware-nonfree/firmware-realtek_20190114-2_all.deb --output /tmp/firmware/firmware-realtek_20190114-2_all.deb
+            - name: Build
+              run: |
+                cd /tmp
+                pax -x sv4cpio -w firmware | gzip -c >firmware.cpio.gz
+                cp -p initrd.gz initrd.gz.orig
+                cat initrd.gz.orig /tmp/firmware.cpio.gz > initrd.gz
+            - name: Package release
+              run: |
+                cd /tmp
+                zip release.zip initrd.gz linux
+            - name: Create release 
+              id: create_release
+              uses: actions/create-release@v1
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                tag_name: ${{ github.ref }}
+                release_name: Release ${{ github.ref }}
+                draft: false
+                prerelease: false
+            - name: Upload release asset
+              id: upload-release-asset
+              uses: actions/upload-release-asset@v1
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                upload_url: ${{ steps.create_release.outputs.upload_url }}
+                asset_path: /tmp/release.zip
+                asset_name: custom-boot-relatek_debian-buster-amd64.zip
+                asset_content_type: application/zip
