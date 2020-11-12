@@ -1,0 +1,27 @@
+name: CI
+
+on:
+    push:
+    pull_request:
+        branches: [master]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - name: Install dependencies
+              run: sudo apt-get install -qq -y pax curl ca-certificates
+            - name: Prepare build
+              run: |
+                mkdir /tmp/firmware
+                curl http://ftp.debian.org/debian/dists/buster/main/installer-amd64/current/images/netboot/debian-installer/amd64/initrd.gz --output /tmp/initrd.gz
+                curl http://ftp.debian.org/debian/dists/buster/main/installer-amd64/current/images/netboot/debian-installer/amd64/linux --output /tmp/linux
+                curl http://ftp.de.debian.org/debian/pool/non-free/f/firmware-nonfree/firmware-realtek_20190114-2_all.deb --output /tmp/firmware/firmware-realtek_20190114-2_all.deb
+            - name: Build
+              run: |
+                cd /tmp
+                pax -x sv4cpio firmware | gzip -c >firmware.cpio.gz
+                cp -p initrd.gz initrd.gz.orig
+                cat initrd.gz.orig /tmp/firmware.cpio.gz > initrd.gz
+            
